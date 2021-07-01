@@ -47,6 +47,31 @@ class CatCall(Module):
     def forward(self, x):
         return torch.cat([x, self.callable(x)], dim=self.dim)
 
+class SelfAttention(Module):
+    def __init__(self, head_dim: int, heads: int):
+        super().__init__()
+        self.head_dim = head_dim
+        self.heads = heads
+        self.in_proj = nn.Linear(head_dim * heads, head_dim * heads * 3)
+        self.out_proj = nn.Linear(head_dim * heads, head_dim * heads)
+        
+    def forward(self, x):
+        b, h, w, d = x.shape
+        x = rearrange(x, "b h w d -> b (h w) d")
+        q, k, v = torch.split(x, [
+                                   self.hidden_dim,
+                                   self.hidden_dim,
+                                   self.hidden_dim,
+                                   ], -1)
+        (q, k, v) = map(lambda x: rearrange(x, "b i (h d) -> b i h d", h=self.heads), (q, k, v))
+        a = einsum("b i h d, b j h d -> b h i j", q, k) * (self.head_dim ** -0.5)
+        a = F.softmax(a, dim=-1)
+        o = einsum("b h i j, b j h d -> b i h d", a, v)
+        o = rearrange(o, "b i h d -> b i (h d)")
+        x = self.out_proj(o)
+        x = rearrange(x, "b (h w) d -> b h w d", h=h, w=w)
+        return x
+
 class UNet(Module):
     def __init__(self, encdec_pairs: Sequence[Tuple[Module, Module]], bottleneck: Module):
         super().__init__()
