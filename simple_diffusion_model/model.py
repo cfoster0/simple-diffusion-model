@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from einops import rearrange, reduce, repeat
 
-class RotaryFeatures(nn.Module):
+class Rotary(nn.Module):
     def __init__(self, out_features):
         super().__init__()
         inv_freq = 1. / torch.logspace(1.0, 10_000.0, out_features // 2)
@@ -22,7 +22,7 @@ class RotaryFeatures(nn.Module):
 class Model(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        self.timestep_conditioning = RotaryFeatures(dim)
+        self.timestep_conditioning = Rotary(dim)
        
     def forward(self, x, timestep):
         x = self.timestep_conditioning(x, timestep)
