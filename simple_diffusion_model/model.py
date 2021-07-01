@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from einops import rearrange, reduce, repeat
+from typing import Sequence, Tuple
 
 class Rotary(nn.Module):
     def __init__(self, out_features):
@@ -53,14 +54,17 @@ class Upsampler(nn.Module):
         return x
 
 class UNet(nn.Module):
-    def __init__(self, downsamplings: int):
+    def __init__(self, module_pairs: Sequence[Tuple[nn.Module, nn.Module]]):
         super().__init__()
+        outer, *inner = module_pairs
+        enc, dec = outer
+        if len(module_pairs) > 1:
+            self.net = nn.Sequential(enc, Residual(UNet(inner)), dec)
+        else:
+            self.net = nn.Sequential(enc, dec)
         
     def forward(self, x):
-        #x = tail(head(x) + head(middle(x)))
-        #x = tail(Residual(head(x), middle))
-        #x = c(a(x) + a(b(x))
-        return x
+        return self.net(x)
         
 class Model(nn.Module):
     def __init__(self, dim):
