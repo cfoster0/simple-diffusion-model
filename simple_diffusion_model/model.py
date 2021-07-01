@@ -18,6 +18,18 @@ class Rotary(nn.Module):
         rotated = torch.cat((-evens, odds), dim = -1)
         out += rotated * posemb.sin()
         return out
+
+class Residual(nn.Module):
+    def __init__(self, residual):
+        """
+        In the constructor we stash way the module that'll be called along
+        the residual branch. This is just for convenience.
+        """
+        super(Residual, self).__init__()
+        self.residual = residual
+
+    def forward(self, x):
+        return x + self.residual(x)
         
 class Model(nn.Module):
     def __init__(self, dim):
