@@ -53,10 +53,13 @@ class Upsampler(nn.Module):
         return x
 
 class UNet(nn.Module):
-    def __init__(self):
+    def __init__(self, downsamplings: int):
         super().__init__()
-
+        
     def forward(self, x):
+        #x = tail(head(x) + head(middle(x)))
+        #x = tail(Residual(head(x), middle))
+        #x = c(a(x) + a(b(x))
         return x
         
 class Model(nn.Module):
