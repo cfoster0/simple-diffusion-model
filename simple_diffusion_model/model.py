@@ -25,17 +25,26 @@ class Residual(nn.Module):
         In the constructor we stash way the module that'll be called along
         the residual branch. This is just for convenience.
         """
-        super(Residual, self).__init__()
+        super().__init__()
         self.residual = residual
 
     def forward(self, x):
         return x + self.residual(x)
+
+class UNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return x
         
 class Model(nn.Module):
     def __init__(self, dim):
         super().__init__()
         self.timestep_conditioning = Rotary(dim)
+        self.unet = UNet()
        
     def forward(self, x, timestep):
         x = self.timestep_conditioning(x, timestep)
+        x = self.unet(x)
         return x
