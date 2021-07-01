@@ -52,6 +52,7 @@ class SelfAttention(Module):
         super().__init__()
         self.head_dim = head_dim
         self.heads = heads
+        self.hidden_dim = head_dim * heads
         self.in_proj = nn.Linear(head_dim * heads, head_dim * heads * 3)
         self.out_proj = nn.Linear(head_dim * heads, head_dim * heads)
         
