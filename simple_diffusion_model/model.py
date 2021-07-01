@@ -22,8 +22,8 @@ class RotaryFeatures(nn.Module):
 class Model(nn.Module):
     def __init__(self, dim):
         super().__init__()
-        self.timestep_to_embedding = RotaryFeatures(dim)
+        self.timestep_conditioning = RotaryFeatures(dim)
        
     def forward(self, x, timestep):
-        x = self.timestep_to_embedding(x, timestep)
+        x = self.timestep_conditioning(x, timestep)
         return x
