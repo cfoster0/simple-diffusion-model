@@ -3,9 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from einops import rearrange, reduce, repeat
-from typing import Sequence, Tuple
+from typing import Sequence, Tuple, Callable
+from torch.nn import Module
 
-class Rotary(nn.Module):
+class Rotary(Module):
     def __init__(self, out_features):
         super().__init__()
         inv_freq = 1. / torch.logspace(1.0, 10_000.0, out_features // 2)
@@ -20,7 +21,7 @@ class Rotary(nn.Module):
         out += rotated * posemb.sin()
         return out
 
-class Residual(nn.Module):
+class Residual(Module):
     def __init__(self, residual):
         """
         In the constructor we stash way the module that'll be called along
@@ -32,41 +33,34 @@ class Residual(nn.Module):
     def forward(self, x):
         return x + self.residual(x)
 
-class Transformer(nn.Module):
-    def __init__(self):
+class CatCall(Module):
+    def __init__(self, callable: Callable, dim=-1):
+        """
+        This wrapper is similar to Residual. It runs a function or
+        module on an input and then concatenates the result with the
+        original input along a specified dimension.
+        """
         super().__init__()
+        self.callable = callable
+        self.dim = dim
 
     def forward(self, x):
-        return x
+        return torch.cat([x, self.callable(x)], dim=self.dim)
 
-class Downsampler(nn.Module):
-    def __init__(self):
+class UNet(Module):
+    def __init__(self, encdec_pairs: Sequence[Tuple[Module, Module]], bottleneck: Module):
         super().__init__()
-
-    def forward(self, x):
-        return x
-
-class Upsampler(nn.Module):
-    def __init__(self):
-        super().__init__()
-        
-    def forward(self, x):
-        return x
-
-class UNet(nn.Module):
-    def __init__(self, module_pairs: Sequence[Tuple[nn.Module, nn.Module]]):
-        super().__init__()
-        outer, *inner = module_pairs
+        outer, *inner = encdec_pairs
         enc, dec = outer
-        if len(module_pairs) > 1:
-            self.net = nn.Sequential(enc, Residual(UNet(inner)), dec)
+        if inner:
+            self.net = nn.Sequential(enc, CatCall(UNet(inner)), dec)
         else:
-            self.net = nn.Sequential(enc, dec)
+            self.net = nn.Sequential(enc, CatCall(bottleneck), dec)
         
     def forward(self, x):
         return self.net(x)
         
-class Model(nn.Module):
+class Model(Module):
     def __init__(self, dim):
         super().__init__()
         self.timestep_conditioning = Rotary(dim)
