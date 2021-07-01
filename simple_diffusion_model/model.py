@@ -53,7 +53,7 @@ class UNet(Module):
         outer, *inner = encdec_pairs
         enc, dec = outer
         if inner:
-            self.net = nn.Sequential(enc, CatCall(UNet(inner)), dec)
+            self.net = nn.Sequential(enc, CatCall(UNet(inner, bottleneck)), dec)
         else:
             self.net = nn.Sequential(enc, CatCall(bottleneck), dec)
         
