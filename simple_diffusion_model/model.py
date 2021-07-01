@@ -11,8 +11,8 @@ class RotaryFeatures(nn.Module):
         self.register_buffer('inv_freq', inv_freq)
         
     def forward(self, x, timestep):
-        freqs = einsum('n , c -> n c', timestep, self.inv_freq) # c = d / 2
-        posemb = repeat(freqs, "n c -> n (2 c)")
+        freqs = einsum('b , c -> b c', timestep, self.inv_freq) # c = d / 2
+        posemb = repeat(freqs, "b c -> b (2 c)")
         out = x * posemb.cos()
         odds, evens = rearrange(x, '... (j c) -> ... j c', j = 2).unbind(dim = -2)
         rotated = torch.cat((-evens, odds), dim = -1)
