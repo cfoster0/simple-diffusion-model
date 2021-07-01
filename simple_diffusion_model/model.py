@@ -31,6 +31,27 @@ class Residual(nn.Module):
     def forward(self, x):
         return x + self.residual(x)
 
+class Transformer(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return x
+
+class Downsampler(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return x
+
+class Upsampler(nn.Module):
+    def __init__(self):
+        super().__init__()
+        
+    def forward(self, x):
+        return x
+
 class UNet(nn.Module):
     def __init__(self):
         super().__init__()
