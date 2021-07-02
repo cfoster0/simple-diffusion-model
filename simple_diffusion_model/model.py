@@ -128,11 +128,11 @@ class Model(Module):
         super().__init__()
         self.timestep_conditioning = Rotary(64)
         self.unet = UNet([
-            (EncoderBlock(64), DecoderBlock(64)),
-            (EncoderBlock(128), DecoderBlock(128)),
-            (EncoderBlock(256), DecoderBlock(256)),
-            (EncoderBlock(512), DecoderBlock(512)),
-        ], BottleneckBlock(1024))
+            (EncoderBlock(64, downsample=False), DecoderBlock(64, upsample=False)),
+            (EncoderBlock(128, downsample=True), DecoderBlock(128, upsample=True)),
+            (EncoderBlock(256, downsample=True), DecoderBlock(256, upsample=True)),
+            (EncoderBlock(512, downsample=True), DecoderBlock(512, upsample=True)),
+        ], BottleneckBlock(1024, downsample=True, upsample=True))
        
     def forward(self, x, timestep):
         x = self.timestep_conditioning(x, timestep)
