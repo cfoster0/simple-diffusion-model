@@ -84,16 +84,16 @@ class SelfAttention(Module):
         return x
 
 class EncoderBlock(Module):
-    def __init__(self, dim, Dow sample: bool):
+    def __init__(self, module, dim):
         super().__init__()
         self.dim = dim
-        self.net = nn.Identity()
+        self.net = nn.Sequential(module)
         
     def forward(self, x):
         return self.net(x)
 
 class DecoderBlock(Module):
-    def __init__(self, dim, upsample: bool):
+    def __init__(self, dim):
         super().__init__()
         self.dim = dim
         self.net = nn.Identity()
@@ -102,10 +102,10 @@ class DecoderBlock(Module):
         return self.net(x)
 
 class BottleneckBlock(Module):
-    def __init__(self, dim):
+    def __init__(self, module, dim):
         super().__init__()
         self.dim = dim
-        self.net = nn.Identity()
+        self.net = nn.Sequential(module)
         
     def forward(self, x):
         return self.net(x)
@@ -128,11 +128,11 @@ class Model(Module):
         super().__init__()
         self.timestep_conditioning = Rotary(64)
         self.unet = UNet([
-            (EncoderBlock(64, downsample=False), DecoderBlock(64, upsample=False)),
-            (EncoderBlock(128, downsample=True), DecoderBlock(128, upsample=True)),
-            (EncoderBlock(256, downsample=True), DecoderBlock(256, upsample=True)),
-            (EncoderBlock(512, downsample=True), DecoderBlock(512, upsample=True)),
-        ], BottleneckBlock(1024, downsample=True, upsample=True))
+            (EncoderBlock(nn.Identity(), 64), DecoderBlock(64)),
+            (EncoderBlock(Downsample(), 128), Upsample(DecoderBlock(128))),
+            (EncoderBlock(Downsample(), 256), Upsample(DecoderBlock(256))),
+            (EncoderBlock(Downsample(), 512), Upsample(DecoderBlock(512))),
+        ], Upsample(BottleneckBlock(Downsample(), 1024)))
        
     def forward(self, x, timestep):
         x = self.timestep_conditioning(x, timestep)
