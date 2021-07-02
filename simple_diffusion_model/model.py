@@ -28,12 +28,21 @@ class Sum(Module):
     def forward(self, *summands):
         return sum(summands)
 
-class Graph(Module):
-    def __init__(self):
+class Cat(Module):
+    def __init__(self, dim=-1):
         super().__init__()
+        self.dim = dim
 
-    def forward(self, x, mapping):
-        return x, mapping(x)
+    def forward(self, *items):
+        return torch.cat(items, dim=self.dim)
+
+class Graph(Module):
+    def __init__(self, mapping):
+        super().__init__()
+        self.mapping = mapping
+
+    def forward(self, x):
+        return x, self.mapping(x)
 
 class Residual(Module):
     def __init__(self, residual):
@@ -46,20 +55,6 @@ class Residual(Module):
 
     def forward(self, x):
         return self.net(x)
-
-class CatCall(Module):
-    def __init__(self, callable: Callable, dim=-1):
-        """
-        This wrapper is similar to Residual. It runs a function or
-        module on an input and then concatenates the result with the
-        original input along a specified dimension.
-        """
-        super().__init__()
-        self.callable = callable
-        self.dim = dim
-
-    def forward(self, x):
-        return torch.cat([x, self.callable(x)], dim=self.dim)
 
 class SelfAttention(Module):
     def __init__(self, head_dim: int, heads: int):
@@ -93,9 +88,9 @@ class UNet(Module):
         outer, *inner = encdec_pairs
         enc, dec = outer
         if inner:
-            self.net = nn.Sequential(enc, CatCall(UNet(inner, bottleneck)), dec)
+            self.net = nn.Sequential(enc, Cat(Graph(UNet(inner, bottleneck))), dec)
         else:
-            self.net = nn.Sequential(enc, CatCall(bottleneck), dec)
+            self.net = nn.Sequential(enc, Cat(Graph(bottleneck)), dec)
         
     def forward(self, x):
         return self.net(x)
