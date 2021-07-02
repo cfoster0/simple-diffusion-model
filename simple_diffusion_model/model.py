@@ -37,7 +37,7 @@ class Concatenate(Module):
         return torch.cat(items, dim=self.dim)
 
 class Graph(Module):
-    def __init__(self, mapping):
+    def __init__(self, mapping: Callable):
         super().__init__()
         self.mapping = mapping
 
@@ -45,7 +45,7 @@ class Graph(Module):
         return x, self.mapping(x)
 
 class Residual(Module):
-    def __init__(self, residual):
+    def __init__(self, residual: Module):
         """
         In the constructor we stash way the module that'll be called along
         the residual branch. This is just for convenience.
