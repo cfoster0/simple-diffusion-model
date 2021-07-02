@@ -83,6 +83,24 @@ class SelfAttention(Module):
         x = rearrange(x, "b (h w) d -> b h w d", h=h, w=w)
         return x
 
+class EncoderBlock(Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.dim = dim
+        self.net = nn.Identity()
+        
+    def forward(self, x):
+        return self.net(x)
+
+class DecoderBlock(Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.dim = dim
+        self.net = nn.Identity()
+        
+    def forward(self, x):
+        return self.net(x)
+
 class UNet(Module):
     def __init__(self, encdec_pairs: Sequence[Tuple[Module, Module]], bottleneck: Module):
         super().__init__()
@@ -97,10 +115,13 @@ class UNet(Module):
         return self.net(x)
         
 class Model(Module):
-    def __init__(self, dim):
+    def __init__(self):
         super().__init__()
-        self.timestep_conditioning = Rotary(dim)
-        self.unet = UNet([])
+        dims = [64, 32, 16]
+        self.timestep_conditioning = Rotary(dims[0])
+        self.unet = UNet([
+            (EncoderBlock(dim), DecoderBlock(dim)) for dim in dims
+        ])
        
     def forward(self, x, timestep):
         x = self.timestep_conditioning(x, timestep)
