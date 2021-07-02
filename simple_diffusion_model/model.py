@@ -28,7 +28,7 @@ class Sum(Module):
     def forward(self, *summands):
         return sum(summands)
 
-class Cat(Module):
+class Concatenate(Module):
     def __init__(self, dim=-1):
         super().__init__()
         self.dim = dim
@@ -59,11 +59,12 @@ class Residual(Module):
 class SelfAttention(Module):
     def __init__(self, head_dim: int, heads: int):
         super().__init__()
+        hidden_dim = head_dim * heads
         self.head_dim = head_dim
         self.heads = heads
-        self.hidden_dim = head_dim * heads
-        self.in_proj = nn.Linear(head_dim * heads, head_dim * heads * 3)
-        self.out_proj = nn.Linear(head_dim * heads, head_dim * heads)
+        self.hidden_dim = hidden_dim
+        self.in_proj = nn.Linear(hidden_dim, hidden_dim * 3)
+        self.out_proj = nn.Linear(hidden_dim, hidden_dim)
         
     def forward(self, x):
         b, h, w, d = x.shape
@@ -88,9 +89,9 @@ class UNet(Module):
         outer, *inner = encdec_pairs
         enc, dec = outer
         if inner:
-            self.net = nn.Sequential(enc, Cat(Graph(UNet(inner, bottleneck))), dec)
+            self.net = nn.Sequential(enc, Concatenate(Graph(UNet(inner, bottleneck))), dec)
         else:
-            self.net = nn.Sequential(enc, Cat(Graph(bottleneck)), dec)
+            self.net = nn.Sequential(enc, Concatenate(Graph(bottleneck)), dec)
         
     def forward(self, x):
         return self.net(x)
@@ -99,7 +100,7 @@ class Model(Module):
     def __init__(self, dim):
         super().__init__()
         self.timestep_conditioning = Rotary(dim)
-        self.unet = UNet()
+        self.unet = UNet([])
        
     def forward(self, x, timestep):
         x = self.timestep_conditioning(x, timestep)
