@@ -21,6 +21,20 @@ class Rotary(Module):
         out += rotated * posemb.sin()
         return out
 
+class Sum(Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, *summands):
+        return sum(summands)
+
+class Graph(Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x, mapping):
+        return x, mapping(x)
+
 class Residual(Module):
     def __init__(self, residual):
         """
@@ -28,10 +42,10 @@ class Residual(Module):
         the residual branch. This is just for convenience.
         """
         super().__init__()
-        self.residual = residual
+        self.net = Sum(Graph(residual))
 
     def forward(self, x):
-        return x + self.residual(x)
+        return self.net(x)
 
 class CatCall(Module):
     def __init__(self, callable: Callable, dim=-1):
