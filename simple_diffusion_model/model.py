@@ -84,7 +84,7 @@ class SelfAttention(Module):
         return x
 
 class EncoderBlock(Module):
-    def __init__(self, dim):
+    def __init__(self, dim, Dow sample: bool):
         super().__init__()
         self.dim = dim
         self.net = nn.Identity()
@@ -93,7 +93,7 @@ class EncoderBlock(Module):
         return self.net(x)
 
 class DecoderBlock(Module):
-    def __init__(self, dim):
+    def __init__(self, dim, upsample: bool):
         super().__init__()
         self.dim = dim
         self.net = nn.Identity()
@@ -126,11 +126,13 @@ class UNet(Module):
 class Model(Module):
     def __init__(self):
         super().__init__()
-        dims = [128, 256, 512, 1024]
-        self.timestep_conditioning = Rotary(dims[0])
+        self.timestep_conditioning = Rotary(64)
         self.unet = UNet([
-            (EncoderBlock(dim), DecoderBlock(dim)) for dim in dims[:-1]
-        ], BottleneckBlock(dims[-1]))
+            (EncoderBlock(64), DecoderBlock(64)),
+            (EncoderBlock(128), DecoderBlock(128)),
+            (EncoderBlock(256), DecoderBlock(256)),
+            (EncoderBlock(512), DecoderBlock(512)),
+        ], BottleneckBlock(1024))
        
     def forward(self, x, timestep):
         x = self.timestep_conditioning(x, timestep)
