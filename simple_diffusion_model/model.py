@@ -101,6 +101,15 @@ class DecoderBlock(Module):
     def forward(self, x):
         return self.net(x)
 
+class BottleneckBlock(Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.dim = dim
+        self.net = nn.Identity()
+        
+    def forward(self, x):
+        return self.net(x)
+
 class UNet(Module):
     def __init__(self, encdec_pairs: Sequence[Tuple[Module, Module]], bottleneck: Module):
         super().__init__()
@@ -117,11 +126,11 @@ class UNet(Module):
 class Model(Module):
     def __init__(self):
         super().__init__()
-        dims = [64, 32, 16]
+        dims = [128, 256, 512, 1024]
         self.timestep_conditioning = Rotary(dims[0])
         self.unet = UNet([
-            (EncoderBlock(dim), DecoderBlock(dim)) for dim in dims
-        ])
+            (EncoderBlock(dim), DecoderBlock(dim)) for dim in dims[:-1]
+        ], BottleneckBlock(dims[-1]))
        
     def forward(self, x, timestep):
         x = self.timestep_conditioning(x, timestep)
