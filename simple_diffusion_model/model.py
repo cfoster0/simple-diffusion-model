@@ -15,11 +15,11 @@ class Function(Module):
     def forward(self, *args, **kwargs):
         return self.callable(*args, **kwargs)
 
-def Sum() = Function(lambda x: sum(x))
+def Sum() = return Function(lambda x: sum(x))
 
-def Concatenate() = Function(lambda x: torch.cat(x, dim=-1))
+def Concatenate() = return Function(lambda x: torch.cat(x, dim=-1))
 
-def Graph(callable) = Function(lambda x: (x, callable(x)))
+def Graph(callable) = return Function(lambda x: (x, callable(x)))
 
 def CatCall(callable) = return Sequential(Graph(callable), Concatenate())
 
