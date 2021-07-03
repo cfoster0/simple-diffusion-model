@@ -7,30 +7,23 @@ from einops import rearrange, reduce, repeat
 from typing import Sequence, Tuple, Callable
 from torch.nn import Module, Linear, Sequential, Identity
 
-def module(func):
-    @functools.wraps(func)
+class Function(Module):
+    def __init__(self, callable):
+        super().__init__()
+        self.callable = callable
 
-    class Function(Module):
-        def __init__(self):
-            self.func = func
+    def forward(self, *args, **kwargs):
+        return self.callable(*args, **kwargs)
 
-        def forward(self, *args, **kwargs):
-            return self.func(*args, **kwargs)
+def Sum() = Function(lambda x: sum(x))
 
-    return Function()
+def Concatenate() = Function(lambda x: torch.cat(x, dim=-1))
 
-def graph(f) = return lambda x: x, f(x)
+def Graph(callable) = Function(lambda x: (x, callable(x)))
 
-@module
-def Graph(f) = graph(x)
+def CatCall(callable) = return Sequential(Graph(callable), Concatenate())
 
-@module
-def Residual(f) = sum(graph(x))
-
-@module
-def Concatenate(x, dim=-1) = return torch.cat(x, dim=dim)
-
-def CatCall(f) = return Sequential(Graph(), Concatenate())
+def Residual(callable) = return Sequential(Graph(callable), Sum())
 
 class Rotary(Module):
     def __init__(self, out_features):
