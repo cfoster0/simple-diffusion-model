@@ -19,42 +19,18 @@ def module(func):
 
     return Function()
 
-class Sum(Module):
-    def __init__(self, callable: Callable):
-        super().__init__()
-        self.callable = callable
+def graph(f) = return lambda x: x, f(x)
 
-    def forward(self, x):
-        return sum(self.callable(x))
+@module
+def Graph(f) = graph(x)
 
-class Concatenate(Module):
-    def __init__(self, callable: Callable, dim=-1):
-        super().__init__()
-        self.dim = dim
-        self.callable = callable
+@module
+def Residual(f) = sum(graph(x))
 
-    def forward(self, x):
-        return torch.cat(self.callable(x), dim=self.dim)
+@module
+def Concatenate(x, dim=-1) = return torch.cat(x, dim=dim)
 
-class Graph(Module):
-    def __init__(self, mapping: Callable):
-        super().__init__()
-        self.mapping = mapping
-
-    def forward(self, x):
-        return x, self.mapping(x)
-
-class Residual(Module):
-    def __init__(self, residual: Callable):
-        """
-        In the constructor we stash way the callable that'll be called along
-        the residual branch. This is just for convenience.
-        """
-        super().__init__()
-        self.net = Sum(Graph(residual))
-
-    def forward(self, x):
-        return self.net(x)
+def CatCall(f) = return Sequential(Graph(), Concatenate())
 
 class Rotary(Module):
     def __init__(self, out_features):
@@ -131,9 +107,9 @@ class UNet(Module):
         outer, *inner = encdec_pairs
         enc, dec = outer
         if inner:
-            self.net = Sequential(enc, Concatenate(Graph(UNet(inner, bottleneck))), dec)
+            self.net = Sequential(enc, CatCall(UNet(inner, bottleneck)), dec)
         else:
-            self.net = Sequential(enc, Concatenate(Graph(bottleneck)), dec)
+            self.net = Sequential(enc, CatCall(bottleneck), dec)
         
     def forward(self, x):
         return self.net(x)
