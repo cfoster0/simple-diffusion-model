@@ -7,19 +7,21 @@ from typing import Sequence, Tuple, Callable
 from torch.nn import Module, Linear, Sequential, Identity
 
 class Sum(Module):
-    def __init__(self):
+    def __init__(self, callable: Callable):
         super().__init__()
+        self.callable = callable
 
-    def forward(self, *summands):
-        return sum(summands)
+    def forward(self, x):
+        return sum(self.callable(x))
 
 class Concatenate(Module):
-    def __init__(self, dim=-1):
+    def __init__(self, callable: Callable, dim=-1):
         super().__init__()
         self.dim = dim
+        self.callable = callable
 
-    def forward(self, *items):
-        return torch.cat(items, dim=self.dim)
+    def forward(self, x):
+        return torch.cat(self.callable(x), dim=self.dim)
 
 class Graph(Module):
     def __init__(self, mapping: Callable):
