@@ -1,10 +1,23 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import functools
 
 from einops import rearrange, reduce, repeat
 from typing import Sequence, Tuple, Callable
 from torch.nn import Module, Linear, Sequential, Identity
+
+def module(func):
+    @functools.wraps(func)
+
+    class Function(Module):
+        def __init__(self):
+            self.func = func
+
+        def forward(self, *args, **kwargs):
+            return self.func(*args, **kwargs)
+
+    return Function()
 
 class Sum(Module):
     def __init__(self, callable: Callable):
