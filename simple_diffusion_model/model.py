@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from einops import rearrange, reduce, repeat
 from typing import Sequence, Tuple, Callable
-from torch.nn import Module
+from torch.nn import Module, Linear, Sequential, Identity
 
 class Rotary(Module):
     def __init__(self, out_features):
@@ -63,8 +63,8 @@ class SelfAttention(Module):
         self.head_dim = head_dim
         self.heads = heads
         self.hidden_dim = hidden_dim
-        self.in_proj = nn.Linear(hidden_dim, hidden_dim * 3)
-        self.out_proj = nn.Linear(hidden_dim, hidden_dim)
+        self.in_proj = Linear(hidden_dim, hidden_dim * 3)
+        self.out_proj = Linear(hidden_dim, hidden_dim)
         
     def forward(self, x):
         b, h, w, d = x.shape
@@ -87,7 +87,7 @@ class EncoderBlock(Module):
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
-        self.net = nn.Identity()
+        self.net = Identity()
         
     def forward(self, x):
         return self.net(x)
@@ -96,7 +96,7 @@ class DecoderBlock(Module):
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
-        self.net = nn.Identity()
+        self.net = Identity()
         
     def forward(self, x):
         return self.net(x)
@@ -105,7 +105,7 @@ class BottleneckBlock(Module):
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
-        self.net = nn.Identity()
+        self.net = Identity()
         
     def forward(self, x):
         return self.net(x)
@@ -116,9 +116,9 @@ class UNet(Module):
         outer, *inner = encdec_pairs
         enc, dec = outer
         if inner:
-            self.net = nn.Sequential(enc, Concatenate(Graph(UNet(inner, bottleneck))), dec)
+            self.net = Sequential(enc, Concatenate(Graph(UNet(inner, bottleneck))), dec)
         else:
-            self.net = nn.Sequential(enc, Concatenate(Graph(bottleneck)), dec)
+            self.net = Sequential(enc, Concatenate(Graph(bottleneck)), dec)
         
     def forward(self, x):
         return self.net(x)
@@ -129,10 +129,10 @@ class Model(Module):
         self.timestep_conditioning = Rotary(64)
         self.unet = UNet([
             (EncoderBlock(64), DecoderBlock(64)),
-            (nn.Sequential(Downsample(), EncoderBlock(128)), nn.Sequential(DecoderBlock(128), Upsample())),
-            (nn.Sequential(Downsample(), EncoderBlock(256)), nn.Sequential(DecoderBlock(256), Upsample())),
-            (nn.Sequential(Downsample(), EncoderBlock(512)), nn.Sequential(DecoderBlock(512), Upsample())),
-        ], nn.Sequential(Downsample(), BottleneckBlock(1024), Upsample())
+            (Sequential(Downsample(), EncoderBlock(128)), Sequential(DecoderBlock(128), Upsample())),
+            (Sequential(Downsample(), EncoderBlock(256)), Sequential(DecoderBlock(256), Upsample())),
+            (Sequential(Downsample(), EncoderBlock(512)), Sequential(DecoderBlock(512), Upsample())),
+        ], Sequential(Downsample(), BottleneckBlock(1024), Upsample())
        
     def forward(self, x, timestep):
         x = self.timestep_conditioning(x, timestep)
