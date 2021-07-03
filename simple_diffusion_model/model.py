@@ -67,11 +67,20 @@ class SelfAttention(Module):
         x = rearrange(x, "b (h w) d -> b h w d", h=h, w=w)
         return x
 
+class ResidualBlock(Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.dim = dim
+        self.net = Residual()
+        
+    def forward(self, x):
+        return self.net(x)
+
 class EncoderBlock(Module):
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
-        self.net = Identity()
+        self.net = Sequential(*[ResidualBlock(dim) for _ in range(3)])
         
     def forward(self, x):
         return self.net(x)
@@ -80,7 +89,7 @@ class DecoderBlock(Module):
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
-        self.net = Identity()
+        self.net = Sequential(*[ResidualBlock(dim) for _ in range(3)])
         
     def forward(self, x):
         return self.net(x)
@@ -89,7 +98,7 @@ class BottleneckBlock(Module):
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
-        self.net = Identity()
+        self.net = Sequential(*[Residual(SelfAttention(dim // 4, 4)) for _ in range(3)]
         
     def forward(self, x):
         return self.net(x)
