@@ -45,9 +45,9 @@ class Graph(Module):
         return x, self.mapping(x)
 
 class Residual(Module):
-    def __init__(self, residual: Module):
+    def __init__(self, residual: Callable):
         """
-        In the constructor we stash way the module that'll be called along
+        In the constructor we stash way the callable that'll be called along
         the residual branch. This is just for convenience.
         """
         super().__init__()
