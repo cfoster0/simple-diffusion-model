@@ -99,10 +99,10 @@ class Bicubic(Module):
 class UNet(Module):
     def __init__(self, encoders_decoders: Sequence[Tuple[Module, Module]], bottleneck: Module):
         super().__init__()
-        outer, *inner = encoders_decoders
-        self.encoder, self.decoder = outer
-        if inner:
-            self.detour = UNet(inner, bottleneck)
+        outer_pair, *inner_remaining = encoders_decoders
+        self.encoder, self.decoder = outer_pair
+        if inner_remaining:
+            self.detour = UNet(inner_remaining, bottleneck)
         else:
             self.detour = bottleneck
         
