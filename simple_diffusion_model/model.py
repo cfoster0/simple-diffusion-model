@@ -67,10 +67,10 @@ class ResidualBlock(Module):
         return x
 
 class Bottleneck(Module):
-    def __init__(self, dim):
+    def __init__(self, channels):
         super().__init__()
-        self.embed_timestep = Rotary(dim)
-        self.layers = ModuleList([SelfAttention(dim // 4, 4) for _ in range(3)])
+        self.embed_timestep = Rotary(channels)
+        self.layers = ModuleList([SelfAttention(channels // 4, 4) for _ in range(3)])
         
     def forward(self, x, timestep):
         for layer in self.layers:
