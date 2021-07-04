@@ -50,46 +50,32 @@ class SelfAttention(Module):
         return x
 
 class ResidualBlock(Module):
-    def __init__(self, dim):
+    def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.dim = dim
-        self.net = Identity()
+        self.embed_timestep = Rotary(out_channels)
+        self.layers = ModuleList([
+            Conv2d(in_channels, out_channels, (1, 1)),
+            Conv2d(out_channels, out_channels, (3, 3), stride=1, padding=1),
+            Conv2d(out_channels, out_channels, (3, 3), stride=1, padding=1),
+        ])
         
     def forward(self, x, timestep):
-        return x + self.net(x)
-
-class EncoderBlock(Module):
-    def __init__(self, dim):
-        super().__init__()
-        self.dim = dim
-        self.layers = ModuleList([ResidualBlock(dim) for _ in range(3)])
-        
-    def forward(self, x, timestep):
-        for layer in self.layers:
-            x = layer(x, timestep)
+        for i, layer in enumerate(self.layers):
+            if i == 0:
+                x = layer(x)
+            else:
+                x = x + self.embed_timestep(layer(x), timestep)
         return x
 
-class DecoderBlock(Module):
+class Bottleneck(Module):
     def __init__(self, dim):
         super().__init__()
-        self.dim = dim
-        self.layers = ModuleList([ResidualBlock(dim) for _ in range(3)])
-        
-    def forward(self, x, timestep):
-        for layer in self.layers:
-            x = layer(x, timestep)
-        return x
-
-class BottleneckBlock(Module):
-    def __init__(self, dim):
-        super().__init__()
-        self.dim = dim
         self.embed_timestep = Rotary(dim)
         self.layers = ModuleList([SelfAttention(dim // 4, 4) for _ in range(3)])
         
     def forward(self, x, timestep):
         for layer in self.layers:
-            x = layer(self.embed_timestep(x, timestep))
+            x = x + layer(self.embed_timestep(x, timestep))
         return x
 
 class Bicubic(Module):
@@ -101,12 +87,10 @@ class Bicubic(Module):
         return F.interpolate(x, scale_factor=self.scale_factor, mode='bicubic'), timestep
 
 class UNet(Module):
-    def __init__(self, encdec_pairs: Sequence[Tuple[Module, Module]], bottleneck: Module):
+    def __init__(self, encoders_decoders: Sequence[Tuple[Module, Module]], bottleneck: Module):
         super().__init__()
-        outer, *inner = encdec_pairs
-        encoder, decoder = outer
-        self.encoder = encoder
-        self.decoder = decoder
+        outer, *inner = encoders_decoders
+        self.encoder, self.decoder = outer
         if inner:
             self.detour = UNet(inner, bottleneck)
         else:
@@ -122,10 +106,10 @@ class Model(Module):
     def __init__(self):
         super().__init__()
         self.unet = UNet([
-            (EncoderBlock(64), DecoderBlock(64)),
-            (Sequential(Bicubic(0.5), EncoderBlock(128)), Sequential(DecoderBlock(128), Bicubic(2))),
-            (Sequential(Bicubic(0.5), EncoderBlock(256)), Sequential(DecoderBlock(256), Bicubic(2))),
-            (Sequential(Bicubic(0.5), EncoderBlock(512)), Sequential(DecoderBlock(512), Bicubic(2))),
+            (ResidualBlock(3, 64), ResidualBlock(64, 3)),
+            (Sequential(Bicubic(0.5), ResidualBlock(128, 256)), Sequential(ResidualBlock(128, 64), Bicubic(2))),
+            (Sequential(Bicubic(0.5), ResidualBlock(256, 512)), Sequential(ResidualBlock(256, 128), Bicubic(2))),
+            (Sequential(Bicubic(0.5), ResidualBlock(512, 1024)), Sequential(ResidualBlock(512, 256), Bicubic(2))),
         ], Sequential(Bicubic(0.5), BottleneckBlock(1024), Bicubic(2.0))
        
     def forward(self, x, timestep):
