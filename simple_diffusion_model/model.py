@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from einops import rearrange, reduce, repeat
 from typing import Sequence, Tuple, Callable
-from torch.nn import Module, Linear, Sequential, LayerNorm
+from torch.nn import Module, Linear, Sequential, LayerNorm, GroupNorm
 
 
 class Rotary(Module):
@@ -57,7 +57,7 @@ class ResidualBlock(Module):
             Conv2d(out_channels, out_channels, (3, 3), stride=1, padding=1),
             Conv2d(out_channels, out_channels, (3, 3), stride=1, padding=1),
         ])
-        self.norm = LayerNorm(out_channels)
+        self.norm = GroupNorm(out_channels // 8, out_channels)
         
     def forward(self, x, timestep):
         for i, layer in enumerate(self.layers):
