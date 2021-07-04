@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from einops import rearrange, reduce, repeat
 from typing import Sequence, Tuple, Callable
-from torch.nn import Module, Linear, Sequential, LayerNorm, GroupNorm
+from torch.nn import Module, Linear, LayerNorm, GroupNorm
 
 
 class Rotary(Module):
@@ -48,6 +48,16 @@ class SelfAttention(Module):
         x = rearrange(x, "b (h w) d -> b h w d", h=h, w=w)
         return x
 
+class ConditionedSequential(Module):
+    def __init__(self, *layers):
+        super().__init__()
+        self.layers = ModuleList(layers)
+        
+    def forward(self, x, *args, **kwargs):
+        for layer in self.layers:
+            x = layer(x, *args, **kwargs)
+        return x
+
 class ResidualBlock(Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
@@ -64,7 +74,7 @@ class ResidualBlock(Module):
             if i == 0:
                 x = layer(x)
             else:
-                x = x + layer(self.embed_timestep(F.gelu(self.norm(x)), timestep))
+                x = x + layer(self.embed_timestep(F.gelu(self.norm(x)), timestep=timestep))
         return x
 
 class BottleneckBlock(Module):
@@ -76,7 +86,7 @@ class BottleneckBlock(Module):
         
     def forward(self, x, timestep):
         for layer in self.layers:
-            x = x + layer(self.embed_timestep(self.norm(x), timestep))
+            x = x + layer(self.embed_timestep(self.norm(x), timestep=timestep))
         return x
 
 class Bicubic(Module):
@@ -84,8 +94,8 @@ class Bicubic(Module):
         super().__init__()
         self.scale_factor = scale_factor
         
-    def forward(self, x, timestep):
-        return F.interpolate(x, scale_factor=self.scale_factor, mode='bicubic'), timestep
+    def forward(self, x, *args, **kwargs):
+        return F.interpolate(x, scale_factor=self.scale_factor, mode='bicubic')
 
 class UNet(Module):
     def __init__(self, encoders_decoders: Sequence[Tuple[Module, Module]], bottleneck: Module):
@@ -98,9 +108,9 @@ class UNet(Module):
             self.detour = bottleneck
         
     def forward(self, x, timestep):
-        encoded = self.encoder(x, timestep)
-        detoured = self.detour(encoded, timestep)
-        decoded = self.decoder(torch.cat([encoded, detoured], dim=-1), timestep)
+        encoded = self.encoder(x, timestep=timestep)
+        detoured = self.detour(encoded, timestep=timestep)
+        decoded = self.decoder(torch.cat([encoded, detoured], dim=-1), timestep=timestep)
         return decoded
         
 class Model(Module):
@@ -108,11 +118,11 @@ class Model(Module):
         super().__init__()
         self.unet = UNet([
             (ResidualBlock(3, 64), ResidualBlock(64, 3)),
-            (Sequential(Bicubic(1/2), ResidualBlock(64, 128)), Sequential(ResidualBlock(128+128, 64), Bicubic(2))),
-            (Sequential(Bicubic(1/2), ResidualBlock(128, 256)), Sequential(ResidualBlock(256+256, 128), Bicubic(2))),
-            (Sequential(Bicubic(1/2), ResidualBlock(256, 512)), Sequential(ResidualBlock(512+512, 256), Bicubic(2))),
-        ], Sequential(Bicubic(1/2), BottleneckBlock(512), Bicubic(2))
+            (ConditionedSequential(Bicubic(1/2), ResidualBlock(64, 128)), ConditionedSequential(ResidualBlock(128+128, 64), Bicubic(2))),
+            (ConditionedSequential(Bicubic(1/2), ResidualBlock(128, 256)), ConditionedSequential(ResidualBlock(256+256, 128), Bicubic(2))),
+            (ConditionedSequential(Bicubic(1/2), ResidualBlock(256, 512)), ConditionedSequential(ResidualBlock(512+512, 256), Bicubic(2))),
+        ], ConditionedSequential(Bicubic(1/2), BottleneckBlock(512), Bicubic(2))
        
     def forward(self, x, timestep):
-        x = self.unet(x, timestep)
+        x = self.unet(x, timestep=timestep)
         return x
