@@ -67,7 +67,7 @@ class ResidualBlock(Module):
                 x = x + layer(self.embed_timestep(self.norm(x), timestep))
         return x
 
-class Bottleneck(Module):
+class BottleneckBlock(Module):
     def __init__(self, channels):
         super().__init__()
         self.embed_timestep = Rotary(channels)
