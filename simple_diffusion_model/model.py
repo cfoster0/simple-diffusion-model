@@ -92,6 +92,14 @@ class BottleneckBlock(Module):
             x = layer(self.embed_timestep(x, timestep))
         return x
 
+class Bicubic(Module):
+    def __init__(self, scale_factor):
+        super().__init__()
+        self.scale_factor = scale_factor
+        
+    def forward(self, x, timestep):
+        return F.interpolate(x, scale_factor=self.scale_factor, mode='bicubic'), timestep
+
 class UNet(Module):
     def __init__(self, encdec_pairs: Sequence[Tuple[Module, Module]], bottleneck: Module):
         super().__init__()
@@ -115,10 +123,10 @@ class Model(Module):
         super().__init__()
         self.unet = UNet([
             (EncoderBlock(64), DecoderBlock(64)),
-            (Sequential(Downsample(), EncoderBlock(128)), Sequential(DecoderBlock(128), Upsample())),
-            (Sequential(Downsample(), EncoderBlock(256)), Sequential(DecoderBlock(256), Upsample())),
-            (Sequential(Downsample(), EncoderBlock(512)), Sequential(DecoderBlock(512), Upsample())),
-        ], Sequential(Downsample(), BottleneckBlock(1024), Upsample())
+            (Sequential(Bicubic(0.5), EncoderBlock(128)), Sequential(DecoderBlock(128), Bicubic(2))),
+            (Sequential(Bicubic(0.5), EncoderBlock(256)), Sequential(DecoderBlock(256), Bicubic(2))),
+            (Sequential(Bicubic(0.5), EncoderBlock(512)), Sequential(DecoderBlock(512), Bicubic(2))),
+        ], Sequential(Bicubic(0.5), BottleneckBlock(1024), Bicubic(2.0))
        
     def forward(self, x, timestep):
         x = self.unet(x, timestep)
