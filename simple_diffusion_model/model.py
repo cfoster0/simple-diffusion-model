@@ -18,8 +18,7 @@ class Rotary(Module):
         posemb = repeat(freqs, "b c -> b (2 c)")
         odds, evens = rearrange(x, '... (j c) -> ... j c', j = 2).unbind(dim = -2)
         rotated = torch.cat((-evens, odds), dim = -1)
-        out = (x * posemb.cos()) + (rotated * posemb.sin())
-        return out
+        return (x * posemb.cos()) + (rotated * posemb.sin())
 
 class SelfAttention(Module):
     def __init__(self, head_dim: int, heads: int):
@@ -110,8 +109,7 @@ class UNet(Module):
     def forward(self, x, timestep):
         encoded = self.encoder(x, timestep=timestep)
         detoured = self.detour(encoded, timestep=timestep)
-        decoded = self.decoder(torch.cat([encoded, detoured], dim=-1), timestep=timestep)
-        return decoded
+        return self.decoder(torch.cat([encoded, detoured], dim=-1), timestep=timestep)
         
 class Model(Module):
     def __init__(self):
@@ -124,5 +122,4 @@ class Model(Module):
         ], ConditionedSequential(Bicubic(1/2), BottleneckBlock(512), Bicubic(2))
        
     def forward(self, x, timestep):
-        x = self.unet(x, timestep=timestep)
-        return x
+        return self.unet(x, timestep=timestep)
