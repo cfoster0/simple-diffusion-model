@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from einops import rearrange, reduce, repeat
 from typing import Sequence, Tuple, Callable
-from torch.nn import Module, Linear, Sequential, Identity
+from torch.nn import Module, Linear, Sequential, LayerNorm
 
 
 class Rotary(Module):
@@ -57,13 +57,14 @@ class ResidualBlock(Module):
             Conv2d(out_channels, out_channels, (3, 3), stride=1, padding=1),
             Conv2d(out_channels, out_channels, (3, 3), stride=1, padding=1),
         ])
+        self.norm = LayerNorm(out_channels)
         
     def forward(self, x, timestep):
         for i, layer in enumerate(self.layers):
             if i == 0:
                 x = layer(x)
             else:
-                x = x + self.embed_timestep(layer(x), timestep)
+                x = x + layer(self.embed_timestep(self.norm(x), timestep))
         return x
 
 class Bottleneck(Module):
@@ -71,10 +72,11 @@ class Bottleneck(Module):
         super().__init__()
         self.embed_timestep = Rotary(channels)
         self.layers = ModuleList([SelfAttention(channels // 4, 4) for _ in range(3)])
+        self.norm = LayerNorm(channels)
         
     def forward(self, x, timestep):
         for layer in self.layers:
-            x = x + layer(self.embed_timestep(x, timestep))
+            x = x + layer(self.embed_timestep(self.norm(x), timestep))
         return x
 
 class Bicubic(Module):
