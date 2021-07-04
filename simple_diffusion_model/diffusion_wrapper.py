@@ -17,6 +17,8 @@ class DiffusionWrapper(nn.Module):
         self.input_shape = input_shape
         self.timesteps = timesteps
         self.beta_schedule = beta_schedule(timesteps)
+        self.alpha_schedule = 1.0 - self.beta_schedule
+        self.alpha_hat_schedule = np.cumprod(self.alpha_schedule)
 
     @torch.no_grad()
     def generate(self, n, **kwargs):
@@ -29,10 +31,10 @@ class DiffusionWrapper(nn.Module):
         return x
 
     def forward(self, x, **kwargs):
-        b = x.shape[0]
-
-        timestep = torch.randint(0, self.timesteps, (b))
-        noised = x
+        unscaled_noise = torch.randn(x.shape)
+        timestep = torch.randint(0, self.timesteps, (x.shape[0]))
+        alpha_hat = torch.gather(self.alpha_hat_schedule, 0, timestep)
+        noised = alpha_hat.sqrt() * x + (1.0 - alpha_hat).sqrt() * unscaled_noise
         noise = noised - x
         predicted_noise = self.net(noised, timestep)
         loss = F.mse_loss(predicted_noise, noise)
