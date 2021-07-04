@@ -7,23 +7,6 @@ from einops import rearrange, reduce, repeat
 from typing import Sequence, Tuple, Callable
 from torch.nn import Module, Linear, Sequential, Identity
 
-class Function(Module):
-    def __init__(self, callable):
-        super().__init__()
-        self.callable = callable
-
-    def forward(self, *args, **kwargs):
-        return self.callable(*args, **kwargs)
-
-def Sum() = return Function(lambda x: sum(x))
-
-def Concatenate() = return Function(lambda x: torch.cat(x, dim=-1))
-
-def Graph(callable) = return Function(lambda x: (x, callable(x)))
-
-def CatCall(callable) = return Sequential(Graph(callable), Concatenate())
-
-def Residual(callable) = return Sequential(Graph(callable), Sum())
 
 class Rotary(Module):
     def __init__(self, out_features):
@@ -71,55 +54,66 @@ class ResidualBlock(Module):
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
-        self.net = Residual()
+        self.net = Identity()
         
-    def forward(self, x):
-        return self.net(x)
+    def forward(self, x, timestep):
+        return x + self.net(x)
 
 class EncoderBlock(Module):
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
-        self.net = Sequential(*[ResidualBlock(dim) for _ in range(3)])
+        self.layers = ModuleList([ResidualBlock(dim) for _ in range(3)])
         
-    def forward(self, x):
-        return self.net(x)
+    def forward(self, x, timestep):
+        for layer in self.layers:
+            x = layer(x, timestep)
+        return x
 
 class DecoderBlock(Module):
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
-        self.net = Sequential(*[ResidualBlock(dim) for _ in range(3)])
+        self.layers = ModuleList([ResidualBlock(dim) for _ in range(3)])
         
-    def forward(self, x):
-        return self.net(x)
+    def forward(self, x, timestep):
+        for layer in self.layers:
+            x = layer(x, timestep)
+        return x
 
 class BottleneckBlock(Module):
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
-        self.net = Sequential(*[Residual(SelfAttention(dim // 4, 4)) for _ in range(3)]
+        self.embed_timestep = Rotary(dim)
+        self.layers = ModuleList([SelfAttention(dim // 4, 4) for _ in range(3)])
         
-    def forward(self, x):
-        return self.net(x)
+    def forward(self, x, timestep):
+        for layer in self.layers:
+            x = layer(self.embed_timestep(x, timestep))
+        return x
 
 class UNet(Module):
     def __init__(self, encdec_pairs: Sequence[Tuple[Module, Module]], bottleneck: Module):
         super().__init__()
         outer, *inner = encdec_pairs
-        enc, dec = outer
+        encoder, decoder = outer
+        self.encoder = encoder
+        self.decoder = decoder
         if inner:
-            self.net = Sequential(enc, CatCall(UNet(inner, bottleneck)), dec)
+            self.detour = UNet(inner, bottleneck)
         else:
-            self.net = Sequential(enc, CatCall(bottleneck), dec)
+            self.detour = bottleneck
         
-    def forward(self, x):
-        return self.net(x)
+    def forward(self, x, timestep):
+        encoded = self.encoder(x, timestep)
+        detoured = self.detour(encoded, timestep)
+        decoded = self.decoder(torch.cat([encoded, detoured], dim=-1), timestep)
+        return decoded
         
 class Model(Module):
     def __init__(self):
         super().__init__()
-        self.timestep_conditioning = Rotary(64)
         self.unet = UNet([
             (EncoderBlock(64), DecoderBlock(64)),
             (Sequential(Downsample(), EncoderBlock(128)), Sequential(DecoderBlock(128), Upsample())),
@@ -128,6 +122,5 @@ class Model(Module):
         ], Sequential(Downsample(), BottleneckBlock(1024), Upsample())
        
     def forward(self, x, timestep):
-        x = self.timestep_conditioning(x, timestep)
-        x = self.unet(x)
+        x = self.unet(x, timestep)
         return x
