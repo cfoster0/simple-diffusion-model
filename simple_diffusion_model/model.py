@@ -114,7 +114,7 @@ class UNet(Module):
 class Model(Module):
     def __init__(self):
         super().__init__()
-        self.unet = UNet([
+        self.net = UNet([
             (ResidualBlock(3, 64), ResidualBlock(64, 3)),
             (ConditionedSequential(Bicubic(1/2), ResidualBlock(64, 128)), ConditionedSequential(ResidualBlock(128+128, 64), Bicubic(2))),
             (ConditionedSequential(Bicubic(1/2), ResidualBlock(128, 256)), ConditionedSequential(ResidualBlock(256+256, 128), Bicubic(2))),
@@ -122,4 +122,4 @@ class Model(Module):
         ], ConditionedSequential(Bicubic(1/2), BottleneckBlock(512), Bicubic(2))
        
     def forward(self, x, timestep):
-        return self.unet(x, timestep=timestep)
+        return self.net(x, timestep=timestep)
