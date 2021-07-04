@@ -102,14 +102,14 @@ class UNet(Module):
         outer_pair, *inner_remaining = encoders_decoders
         self.encoder, self.decoder = outer_pair
         if inner_remaining:
-            self.detour = UNet(inner_remaining, bottleneck)
+            self.bottleneck = UNet(inner_remaining, bottleneck)
         else:
-            self.detour = bottleneck
+            self.bottleneck = bottleneck
         
     def forward(self, x, timestep):
         encoded = self.encoder(x, timestep=timestep)
-        detoured = self.detour(encoded, timestep=timestep)
-        return self.decoder(torch.cat([encoded, detoured], dim=-1), timestep=timestep)
+        bottlenecked = self.bottleneck(encoded, timestep=timestep)
+        return self.decoder(torch.cat([encoded, bottlenecked], dim=-1), timestep=timestep)
         
 class Model(Module):
     def __init__(self):
