@@ -6,6 +6,3 @@ import numpy as np
 from einops import rearrange, reduce, repeat
 from typing import Sequence, Tuple, Callable
 from torch.nn import Module, Linear, LayerNorm, GroupNorm
-
-def beta_schedule(timesteps):
-    pass
