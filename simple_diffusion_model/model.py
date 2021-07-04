@@ -106,10 +106,10 @@ class Model(Module):
         super().__init__()
         self.unet = UNet([
             (ResidualBlock(3, 64), ResidualBlock(64, 3)),
-            (Sequential(Bicubic(1/2), ResidualBlock(128, 256)), Sequential(ResidualBlock(128, 64), Bicubic(2))),
-            (Sequential(Bicubic(1/2), ResidualBlock(256, 512)), Sequential(ResidualBlock(256, 128), Bicubic(2))),
-            (Sequential(Bicubic(1/2), ResidualBlock(512, 1024)), Sequential(ResidualBlock(512, 256), Bicubic(2))),
-        ], Sequential(Bicubic(1/2), BottleneckBlock(1024), Bicubic(2))
+            (Sequential(Bicubic(1/2), ResidualBlock(64, 128)), Sequential(ResidualBlock(128+128, 64), Bicubic(2))),
+            (Sequential(Bicubic(1/2), ResidualBlock(128, 256)), Sequential(ResidualBlock(256+256, 128), Bicubic(2))),
+            (Sequential(Bicubic(1/2), ResidualBlock(256, 512)), Sequential(ResidualBlock(512+512, 256), Bicubic(2))),
+        ], Sequential(Bicubic(1/2), BottleneckBlock(512), Bicubic(2))
        
     def forward(self, x, timestep):
         x = self.unet(x, timestep)
