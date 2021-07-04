@@ -64,7 +64,7 @@ class ResidualBlock(Module):
             if i == 0:
                 x = layer(x)
             else:
-                x = x + layer(self.embed_timestep(self.norm(x), timestep))
+                x = x + layer(self.embed_timestep(F.gelu(self.norm(x)), timestep))
         return x
 
 class BottleneckBlock(Module):
