@@ -60,7 +60,7 @@ class ConditionedSequential(Module):
 class ResidualBlock(Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.embed_timestep = Rotary(out_channels)
+        self.timestep_condition = Rotary(out_channels)
         self.layers = ModuleList([
             Conv2d(in_channels, out_channels, (1, 1)),
             Conv2d(out_channels, out_channels, (3, 3), stride=1, padding=1),
@@ -73,19 +73,19 @@ class ResidualBlock(Module):
             if i == 0:
                 x = layer(x)
             else:
-                x = x + layer(self.embed_timestep(F.gelu(self.norm(x)), timestep=timestep))
+                x = x + layer(self.timestep_condition(F.gelu(self.norm(x)), timestep=timestep))
         return x
 
 class BottleneckBlock(Module):
     def __init__(self, channels):
         super().__init__()
-        self.embed_timestep = Rotary(channels)
+        self.timestep_condition = Rotary(channels)
         self.layers = ModuleList([SelfAttention(channels // 4, 4) for _ in range(3)])
         self.norm = LayerNorm(channels)
         
     def forward(self, x, timestep):
         for layer in self.layers:
-            x = x + layer(self.embed_timestep(self.norm(x), timestep=timestep))
+            x = x + layer(self.timestep_condition(self.norm(x), timestep=timestep))
         return x
 
 class Bicubic(Module):
