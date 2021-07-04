@@ -17,10 +17,9 @@ class Rotary(Module):
     def forward(self, x, timestep):
         freqs = einsum('b , c -> b c', timestep, self.inv_freq) # c = d / 2
         posemb = repeat(freqs, "b c -> b (2 c)")
-        out = x * posemb.cos()
         odds, evens = rearrange(x, '... (j c) -> ... j c', j = 2).unbind(dim = -2)
         rotated = torch.cat((-evens, odds), dim = -1)
-        out += rotated * posemb.sin()
+        out = (x * posemb.cos()) + (rotated * posemb.sin())
         return out
 
 class SelfAttention(Module):
