@@ -11,7 +11,8 @@ import torch.optim as optim
 import torch.nn.functional as F
 import numpy as np
 
-from torch.utils.data import DataLoader, Dataset
+from torchvision.datasets import CIFAR
+from torch.utils.data import DataLoader
 
 # constants
 
@@ -36,9 +37,9 @@ def train():
 
     model = DiffusionWrapper(model)
     model.cuda()
-    
-    train_dataset = TextSamplerDataset(data_train, cfg.max_seq_len)
-    val_dataset   = TextSamplerDataset(data_val, cfg.max_seq_len)
+
+    train_dataset = CIFAR(root = './data', train=True, download=True)
+    val_dataset = CIFAR(root = './data', train=False, download=True)
     train_loader  = cycle(DataLoader(train_dataset, batch_size = BATCH_SIZE))
     val_loader    = cycle(DataLoader(val_dataset, batch_size = BATCH_SIZE))
 
