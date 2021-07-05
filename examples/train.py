@@ -84,6 +84,7 @@ def train():
             samples = model.generate(1)
             image_array = rescale(samples)
             images = wandb.Image(image_array, caption="Generated")
+            wandb.log({"examples": images}, commit=False)
         
         logs = {}
         
@@ -93,7 +94,6 @@ def train():
           'step_time': end_time - start_time,
           'train_loss': train_loss,
           'val_loss': val_loss,
-          'examples': images,
         }
         
         wandb.log(logs)
