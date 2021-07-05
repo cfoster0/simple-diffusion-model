@@ -8,7 +8,7 @@ from typing import Sequence, Tuple, Callable
 from torch.nn import Module
 
 def beta_schedule(timesteps):
-    pass
+    return np.linspace(1e-4, 0.02, timesteps)
 
 class DiffusionWrapper(nn.Module):
     def __init__(self, net, input_shape, timesteps=1000):
