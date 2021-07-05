@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+import torchvision.transforms as transforms
 import numpy as np
 
 from torchvision.datasets import CIFAR
@@ -30,6 +31,12 @@ def cycle(loader):
         for data in loader:
             yield data
 
+def scale(x):
+    return x * 2 - 1
+
+def rescale(x):
+    return (x + 1) / 2
+
 def train():
     wandb.init(project="simple-diffusion-model")
 
@@ -38,8 +45,8 @@ def train():
     model = DiffusionWrapper(model)
     model.cuda()
 
-    train_dataset = CIFAR(root = './data', train=True, download=True)
-    val_dataset = CIFAR(root = './data', train=False, download=True)
+    train_dataset = CIFAR(root='./data', train=True, transform=transforms.ToTensor(), download=True)
+    val_dataset = CIFAR(root='./data', train=False, transform=transforms.ToTensor(), download=True)
     train_loader  = cycle(DataLoader(train_dataset, batch_size = BATCH_SIZE))
     val_loader    = cycle(DataLoader(val_dataset, batch_size = BATCH_SIZE))
 
@@ -55,7 +62,7 @@ def train():
 
         for __ in range(GRADIENT_ACCUMULATE_EVERY):
             batch, _ = next(train_loader)
-            loss = model(batch)
+            loss = model(scale(batch))
             loss.backward()
 
         end_time = time.time()
@@ -70,13 +77,14 @@ def train():
             model.eval()
             with torch.no_grad():
                 batch, _ = next(val_loader)
-                loss = model(batch)
+                loss = model(scale(batch))
                 print(f'validation loss: {loss.item()}')
                 val_loss = loss.item()
 
         if i % GENERATE_EVERY == 0:
             model.eval()
             sample = model.generate(1)
+            image = rescale(sample)
         
         logs = {}
         
