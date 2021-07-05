@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import einsum from torch
+
 from einops import rearrange, reduce, repeat
 from typing import Sequence, Tuple, Callable
 from torch.nn import Module, ModuleList, Linear, LayerNorm, GroupNorm, Conv2d
@@ -18,7 +20,7 @@ class ConditionNHWC(Module):
         posemb = repeat(freqs, "b c -> b (2 c)")
         odds, evens = rearrange(x, '... (j c) -> ... j c', j = 2).unbind(dim = -2)
         rotated = torch.cat((-evens, odds), dim = -1)
-        return (x * posemb.cos()) + (rotated * posemb.sin())
+        return einsum("b ... d , b ... d -> b ... d", x, posemb.cos()) + einsum("b ... d , b ... d, b ... d", rotated, posemb.sin())
     
 class ConditionNCHW(Module):
     def __init__(self, out_features):
@@ -31,7 +33,7 @@ class ConditionNCHW(Module):
         posemb = repeat(freqs, "b c -> b (2 c)")
         odds, evens = rearrange(x, 'b (j c) ... -> b j c ...', j = 2).unbind(dim = 1)
         rotated = torch.cat((-evens, odds), dim = 1)
-        return (x * posemb.cos()) + (rotated * posemb.sin())
+        return einsum("b d ... , b d ... -> b d ...", x, posemb.cos()) + einsum("b d ... , b d ..., b d ...", rotated, posemb.sin())
 
 class SelfAttention(Module):
     def __init__(self, head_dim: int, heads: int):
