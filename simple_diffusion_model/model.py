@@ -10,10 +10,14 @@ from torch.nn import Module, ModuleList, Linear, LayerNorm, GroupNorm, Conv2d
 class Rotary(Module):
     def __init__(self, out_features):
         super().__init__()
-        inv_freq = 1. / torch.logspace(1.0, 10_000.0, out_features // 2)
-        self.register_buffer('inv_freq', inv_freq)
         
-    def forward(self, x, condition):
+    def forward(self, x, condition, **kwargs):
+        if 'condition_scale' in kwargs:
+            condition_min, condition_max = kwargs['condition_scale']
+        else:
+            condition_min = -1.0
+            condition_max = 1.0
+        inv_freq = 1. / torch.linspace(condition_min, condition_max, out_features // 2)
         freqs = torch.outer(condition, self.inv_freq) # c = d / 2
         posemb = repeat(freqs, "b c -> b (2 c)")
         odds, evens = rearrange(x, '... (j c) -> ... j c', j = 2).unbind(dim = -2)
@@ -73,7 +77,7 @@ class ResidualBlock(Module):
             if i == 0:
                 x = layer(x)
             else:
-                x = x + layer(self.condition(F.gelu(self.norm(x)), condition=condition))
+                x = x + layer(self.condition(F.gelu(self.norm(x)), condition=condition, **kwargs))
         return x
 
 class BottleneckBlock(Module):
@@ -83,10 +87,10 @@ class BottleneckBlock(Module):
         self.layers = ModuleList([SelfAttention(channels // 4, 4) for _ in range(3)])
         self.norm = LayerNorm(channels)
         
-    def forward(self, x, condition):
+    def forward(self, x, condition, **kwargs):
         x = rearrange(x, "b c h w -> b h w c")
         for layer in self.layers:
-            x = x + layer(self.condition(self.norm(x), condition=condition))
+            x = x + layer(self.condition(self.norm(x), condition=condition, **kwargs))
         x = rearrange(x, "b h w c -> b c h w")
         return x
 
@@ -108,10 +112,10 @@ class UNet(Module):
         else:
             self.bottleneck = bottleneck
         
-    def forward(self, x, condition):
-        encoded = self.encoder(x, condition=condition)
-        bottlenecked = self.bottleneck(encoded, condition=condition)
-        return self.decoder(torch.cat([encoded, bottlenecked], dim=-1), condition=condition)
+    def forward(self, x, condition, **kwargs):
+        encoded = self.encoder(x, condition=condition, **kwargs)
+        bottlenecked = self.bottleneck(encoded, condition=condition, **kwargs)
+        return self.decoder(torch.cat([encoded, bottlenecked], dim=-1), condition=condition, **kwargs)
         
 class Model(Module):
     def __init__(self):
@@ -124,5 +128,5 @@ class Model(Module):
         ], ConditionedSequential(Bicubic(1/2), BottleneckBlock(512), Bicubic(2))
         )
        
-    def forward(self, x, condition):
-        return self.net(x, condition=condition)
+    def forward(self, x, condition, **kwargs):
+        return self.net(x, condition=condition, **kwargs)
