@@ -120,6 +120,7 @@ class Model(Module):
             (ConditionedSequential(Bicubic(1/2), ResidualBlock(128, 256)), ConditionedSequential(ResidualBlock(256+256, 128), Bicubic(2))),
             (ConditionedSequential(Bicubic(1/2), ResidualBlock(256, 512)), ConditionedSequential(ResidualBlock(512+512, 256), Bicubic(2))),
         ], ConditionedSequential(Bicubic(1/2), BottleneckBlock(512), Bicubic(2))
+        )
        
     def forward(self, x, timestep):
         return self.net(x, timestep=timestep)
