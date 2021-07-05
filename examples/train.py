@@ -40,9 +40,7 @@ def rescale(x):
 def train():
     wandb.init(project="simple-diffusion-model")
 
-    model = Model()
-
-    model = DiffusionWrapper(model)
+    model = DiffusionWrapper(Model())
     model.cuda()
 
     train_dataset = CIFAR(root='./data', train=True, transform=transforms.ToTensor(), download=True)
