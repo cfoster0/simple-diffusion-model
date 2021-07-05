@@ -7,7 +7,7 @@ from typing import Sequence, Tuple, Callable
 from torch.nn import Module, ModuleList, Linear, LayerNorm, GroupNorm, Conv2d
 
 
-class Rotary(Module):
+class ConditionNHWC(Module):
     def __init__(self, out_features):
         super().__init__()
         inv_freq = 1. / torch.logspace(-5, 5, out_features // 2)
@@ -18,6 +18,19 @@ class Rotary(Module):
         posemb = repeat(freqs, "b c -> b (2 c)")
         odds, evens = rearrange(x, '... (j c) -> ... j c', j = 2).unbind(dim = -2)
         rotated = torch.cat((-evens, odds), dim = -1)
+        return (x * posemb.cos()) + (rotated * posemb.sin())
+    
+class ConditionNCHW(Module):
+    def __init__(self, out_features):
+        super().__init__()
+        inv_freq = 1. / torch.logspace(-5, 5, out_features // 2)
+        self.register_buffer('inv_freq', inv_freq)
+        
+    def forward(self, x, condition):
+        freqs = torch.outer(condition, self.inv_freq) # c = d / 2
+        posemb = repeat(freqs, "b c -> b (2 c)")
+        odds, evens = rearrange(x, 'b (j c) ... -> b j c ...', j = 2).unbind(dim = 1)
+        rotated = torch.cat((-evens, odds), dim = 1)
         return (x * posemb.cos()) + (rotated * posemb.sin())
 
 class SelfAttention(Module):
@@ -60,7 +73,7 @@ class ConditionedSequential(Module):
 class ResidualBlock(Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.condition = Rotary(out_channels)
+        self.condition = ConditionNCHW(out_channels)
         self.layers = ModuleList([
             Conv2d(in_channels, out_channels, (1, 1)),
             Conv2d(out_channels, out_channels, (3, 3), stride=1, padding=1),
@@ -79,7 +92,7 @@ class ResidualBlock(Module):
 class BottleneckBlock(Module):
     def __init__(self, channels):
         super().__init__()
-        self.condition = Rotary(channels)
+        self.condition = ConditionNHWC(channels)
         self.layers = ModuleList([SelfAttention(channels // 4, 4) for _ in range(3)])
         self.norm = LayerNorm(channels)
         
