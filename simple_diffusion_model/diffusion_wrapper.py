@@ -1,8 +1,8 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
+from torch import einsum
 from torch.nn import Module
 
 def beta_schedule(timesteps):
