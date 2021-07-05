@@ -14,9 +14,9 @@ class DiffusionWrapper(nn.Module):
         self.net = net
         self.input_shape = input_shape
         self.timesteps = timesteps
-        self.beta_schedule = beta_schedule(timesteps)
-        self.alpha_schedule = 1.0 - self.beta_schedule
-        self.alpha_hat_schedule = np.cumprod(self.alpha_schedule)
+        torch.register_buffer('beta_schedule', torch.from_numpy(beta_schedule(timesteps)))
+        torch.register_buffer('alpha_schedule', torch.from_numpy(1.0 - beta_schedule(timesteps)))
+        torch.register_buffer('alpha_hat_schedule', torch.from_numpy(np.cumprod(1.0 - beta_schedule(timesteps))))
 
     @torch.no_grad()
     def generate(self, n, **kwargs):
