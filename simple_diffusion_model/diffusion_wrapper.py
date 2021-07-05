@@ -35,7 +35,7 @@ class DiffusionWrapper(nn.Module):
         noise = torch.randn(x.shape, device=x.device)
         timestep = torch.randint(0, self.timesteps, (x.shape[0],), device=x.device)
         alpha_hat = torch.gather(torch.from_numpy(self.alpha_hat_schedule), 0, timestep)
-        noised = einsum("b,bchw->bchw", alpha_hat.sqrt(), x) + einsum("b,bchw->bchw", (1.0 - alpha_hat).sqrt(), noise)
+        noised = einsum("b , b ... -> b ...", alpha_hat.sqrt(), x) + einsum("b , b ... -> b ...", (1.0 - alpha_hat).sqrt(), noise)
         predicted_noise = self.net(noised, timestep)
         loss = F.mse_loss(predicted_noise, noise)
         return loss
