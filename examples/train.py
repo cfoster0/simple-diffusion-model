@@ -54,7 +54,8 @@ def train():
         model.train()
 
         for __ in range(GRADIENT_ACCUMULATE_EVERY):
-            loss = model(next(train_loader))
+            batch, _ = next(train_loader)
+            loss = model(batch)
             loss.backward()
 
         end_time = time.time()
@@ -68,7 +69,8 @@ def train():
         if i % VALIDATE_EVERY == 0:
             model.eval()
             with torch.no_grad():
-                loss = model(next(val_loader))
+                batch, _ = next(val_loader)
+                loss = model(batch)
                 print(f'validation loss: {loss.item()}')
                 val_loss = loss.item()
 
