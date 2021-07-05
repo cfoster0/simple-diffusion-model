@@ -43,8 +43,8 @@ def train():
     model = DiffusionWrapper(Model())
     model.cuda()
 
-    train_dataset = CIFAR(root='./data', train=True, transform=transforms.ToTensor(), download=True)
-    val_dataset = CIFAR(root='./data', train=False, transform=transforms.ToTensor(), download=True)
+    train_dataset = CIFAR10(root='./data', train=True, transform=transforms.ToTensor(), download=True)
+    val_dataset = CIFAR10(root='./data', train=False, transform=transforms.ToTensor(), download=True)
     train_loader  = cycle(DataLoader(train_dataset, batch_size = BATCH_SIZE))
     val_loader    = cycle(DataLoader(val_dataset, batch_size = BATCH_SIZE))
 
