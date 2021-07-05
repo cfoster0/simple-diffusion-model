@@ -34,13 +34,12 @@ class DiffusionWrapper(nn.Module):
         return x
 
     def forward(self, x, **kwargs):
-        unscaled_noise = torch.randn(x.shape)
+        noise = torch.randn(x.shape)
         timestep = torch.randint(0, self.timesteps, (x.shape[0]))
         alpha_hat = torch.gather(self.alpha_hat_schedule, 0, timestep)
-        noised = alpha_hat.sqrt() * x + (1.0 - alpha_hat).sqrt() * unscaled_noise
-        noise = noised - x
+        noised = alpha_hat.sqrt() * x + (1.0 - alpha_hat).sqrt() * noise
         predicted_noise = self.net(noised, timestep)
         loss = F.mse_loss(predicted_noise, noise)
-        return noise
+        return loss
         
         
