@@ -25,8 +25,11 @@ class DiffusionWrapper(nn.Module):
         was_training = self.net.training
         self.net.eval()
         x = torch.randn((n,) + input_shape)
-        for timestep in self.timesteps:
-            x = x - self.net(x, timestep)
+        for t in range(self.timesteps, -1, -1):
+            x = (self.alpha_schedule[t] ** -0.5) * (x - ((1.0 - self.alpha_schedule[t]) * (1.0 - self.alpha_schedule[t]) ** -0.5) * self.net(x, t))
+            if t > 0:
+                z = torch.randn((n,) + input_shape)
+                x += z
         self.net.train(was_training)
         return x
 
