@@ -12,7 +12,7 @@ import torch.nn.functional as F
 import torchvision.transforms as transforms
 import numpy as np
 
-from torchvision.datasets import CIFAR
+from torchvision.datasets import CIFAR10
 from torch.utils.data import DataLoader
 
 # constants
