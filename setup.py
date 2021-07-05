@@ -13,11 +13,11 @@ setup(
     'artificial intelligence',
   ],
   install_requires=[
-    'torch',
     'einops',
     'numpy',
+    'torch',
     'torchvision',
-    'wandb',
+    'wandb'
   ],
   classifiers=[
     'Development Status :: 4 - Beta',
