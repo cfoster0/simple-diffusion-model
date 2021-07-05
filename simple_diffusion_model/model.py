@@ -84,8 +84,10 @@ class BottleneckBlock(Module):
         self.norm = LayerNorm(channels)
         
     def forward(self, x, timestep):
+        x = rearrange(x, "b c h w -> b h w c")
         for layer in self.layers:
             x = x + layer(self.timestep_condition(self.norm(x), timestep=timestep))
+        x = rearrange(x, "b h w c -> b c h w")
         return x
 
 class Bicubic(Module):
