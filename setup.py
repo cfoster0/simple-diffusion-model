@@ -16,6 +16,7 @@ setup(
     'torch',
     'einops',
     'numpy',
+    'torchvision',
     'wandb',
   ],
   classifiers=[
