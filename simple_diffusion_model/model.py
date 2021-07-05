@@ -2,8 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import einsum from torch
-
+from einsum torch import einsum
 from einops import rearrange, reduce, repeat
 from typing import Sequence, Tuple, Callable
 from torch.nn import Module, ModuleList, Linear, LayerNorm, GroupNorm, Conv2d
