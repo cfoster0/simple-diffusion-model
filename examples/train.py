@@ -11,8 +11,6 @@ import torch.optim as optim
 import torch.nn.functional as F
 import numpy as np
 
-from einops import rearrange, reduce, repeat
-from typing import Sequence, Tuple, Callable
 from torch.utils.data import DataLoader, Dataset
 
 # constants
@@ -23,7 +21,6 @@ GRADIENT_ACCUMULATE_EVERY = 4
 LEARNING_RATE = 1e-4
 VALIDATE_EVERY  = 100
 GENERATE_EVERY  = 500
-GENERATE_LENGTH = 512
 
 # helpers
 
@@ -32,7 +29,7 @@ def cycle(loader):
         for data in loader:
             yield data
 
-def train(cfg: Config) -> None:
+def train():
     wandb.init(project="simple-diffusion-model")
 
     model = Model()
