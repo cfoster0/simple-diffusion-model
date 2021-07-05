@@ -8,7 +8,7 @@ from torch.nn import Module
 def beta_schedule(timesteps):
     return np.linspace(1e-4, 0.02, timesteps).astype('float32')
 
-class DiffusionWrapper(nn.Module):
+class DiffusionWrapper(Module):
     def __init__(self, net, input_shape, timesteps=1000):
         super().__init__()
         self.net = net
