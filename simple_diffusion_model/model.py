@@ -13,8 +13,8 @@ class Rotary(Module):
         inv_freq = 1. / torch.logspace(1.0, 10_000.0, out_features // 2)
         self.register_buffer('inv_freq', inv_freq)
         
-    def forward(self, x, timestep):
-        freqs = torch.outer(timestep, self.inv_freq) # c = d / 2
+    def forward(self, x, condition):
+        freqs = torch.outer(condition, self.inv_freq) # c = d / 2
         posemb = repeat(freqs, "b c -> b (2 c)")
         odds, evens = rearrange(x, '... (j c) -> ... j c', j = 2).unbind(dim = -2)
         rotated = torch.cat((-evens, odds), dim = -1)
@@ -60,7 +60,7 @@ class ConditionedSequential(Module):
 class ResidualBlock(Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.timestep_condition = Rotary(out_channels)
+        self.condition = Rotary(out_channels)
         self.layers = ModuleList([
             Conv2d(in_channels, out_channels, (1, 1)),
             Conv2d(out_channels, out_channels, (3, 3), stride=1, padding=1),
@@ -68,25 +68,25 @@ class ResidualBlock(Module):
         ])
         self.norm = GroupNorm(32, out_channels)
         
-    def forward(self, x, timestep):
+    def forward(self, x, condition):
         for i, layer in enumerate(self.layers):
             if i == 0:
                 x = layer(x)
             else:
-                x = x + layer(self.timestep_condition(F.gelu(self.norm(x)), timestep=timestep))
+                x = x + layer(self.condition(F.gelu(self.norm(x)), condition=condition))
         return x
 
 class BottleneckBlock(Module):
     def __init__(self, channels):
         super().__init__()
-        self.timestep_condition = Rotary(channels)
+        self.condition = Rotary(channels)
         self.layers = ModuleList([SelfAttention(channels // 4, 4) for _ in range(3)])
         self.norm = LayerNorm(channels)
         
-    def forward(self, x, timestep):
+    def forward(self, x, condition):
         x = rearrange(x, "b c h w -> b h w c")
         for layer in self.layers:
-            x = x + layer(self.timestep_condition(self.norm(x), timestep=timestep))
+            x = x + layer(self.condition(self.norm(x), condition=condition))
         x = rearrange(x, "b h w c -> b c h w")
         return x
 
@@ -108,10 +108,10 @@ class UNet(Module):
         else:
             self.bottleneck = bottleneck
         
-    def forward(self, x, timestep):
-        encoded = self.encoder(x, timestep=timestep)
-        bottlenecked = self.bottleneck(encoded, timestep=timestep)
-        return self.decoder(torch.cat([encoded, bottlenecked], dim=-1), timestep=timestep)
+    def forward(self, x, condition):
+        encoded = self.encoder(x, condition=condition)
+        bottlenecked = self.bottleneck(encoded, condition=condition)
+        return self.decoder(torch.cat([encoded, bottlenecked], dim=-1), condition=condition)
         
 class Model(Module):
     def __init__(self):
@@ -124,5 +124,5 @@ class Model(Module):
         ], ConditionedSequential(Bicubic(1/2), BottleneckBlock(512), Bicubic(2))
         )
        
-    def forward(self, x, timestep):
-        return self.net(x, timestep=timestep)
+    def forward(self, x, condition):
+        return self.net(x, condition=condition)
