@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 from einops import rearrange, reduce, repeat
 from typing import Sequence, Tuple, Callable
-from torch.nn import Module, Linear, LayerNorm, GroupNorm
+from torch.nn import Module, ModuleList, Linear, LayerNorm, GroupNorm
 
 
 class Rotary(Module):
