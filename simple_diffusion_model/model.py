@@ -81,7 +81,7 @@ class ResidualBlock(Module):
             Conv2d(out_channels, out_channels, (3, 3), stride=1, padding=1),
             Conv2d(out_channels, out_channels, (3, 3), stride=1, padding=1),
         ])
-        self.norm = GroupNorm(32, out_channels)
+        self.norm = GroupNorm(1, out_channels)
         
     def forward(self, x, condition):
         for i, layer in enumerate(self.layers):
@@ -132,7 +132,7 @@ class Model(Module):
     def __init__(self):
         super().__init__()
         self.net = UNet([
-            (ResidualBlock(3, 64), ResidualBlock(64, 3)),
+            (ResidualBlock(3, 64), ResidualBlock(64+64, 3)),
             (ConditionedSequential(Bicubic(1/2), ResidualBlock(64, 128)), ConditionedSequential(ResidualBlock(128+128, 64), Bicubic(2))),
             (ConditionedSequential(Bicubic(1/2), ResidualBlock(128, 256)), ConditionedSequential(ResidualBlock(256+256, 128), Bicubic(2))),
             (ConditionedSequential(Bicubic(1/2), ResidualBlock(256, 512)), ConditionedSequential(ResidualBlock(512+512, 256), Bicubic(2))),
