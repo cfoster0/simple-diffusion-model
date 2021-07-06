@@ -75,7 +75,7 @@ class ConditionedSequential(Module):
 class ResidualBlock(Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.condition = ConditionNCHW(out_channels)
+        self.condition = ConditionNCHW(out_channels) if out_channels % 2 == 0 else None
         self.layers = ModuleList([
             Conv2d(in_channels, out_channels, (1, 1)),
             Conv2d(out_channels, out_channels, (3, 3), stride=1, padding=1),
@@ -88,7 +88,10 @@ class ResidualBlock(Module):
             if i == 0:
                 x = layer(x)
             else:
-                x = x + layer(self.condition(F.gelu(self.norm(x)), condition=condition))
+                if self.condition:
+                    x = x + layer(self.condition(F.gelu(self.norm(x)), condition=condition))
+                else:
+                    x = x + layer(F.gelu(self.norm(x)))
         return x
 
 class BottleneckBlock(Module):
