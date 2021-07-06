@@ -24,7 +24,7 @@ class DiffusionWrapper(Module):
         self.net.eval()
         x = torch.randn((n,) + self.input_shape).cuda()
         for t in reversed(range(self.timesteps)):
-            timestep = torch.full((n,), t)
+            timestep = torch.full((n,), t).cuda()
             x = (self.alpha_schedule[t] ** -0.5) * (x - ((1.0 - self.alpha_schedule[t]) * (1.0 - self.alpha_hat_schedule[t]) ** -0.5) * self.net(x, timestep))
             if t > 0:
                 z = torch.randn((n,) + self.input_shape)
