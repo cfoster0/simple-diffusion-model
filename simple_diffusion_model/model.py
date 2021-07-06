@@ -47,7 +47,8 @@ class SelfAttention(Module):
     def forward(self, x):
         b, h, w, d = x.shape
         x = rearrange(x, "b h w d -> b (h w) d")
-        q, k, v = torch.split(x, [
+        p = self.in_proj(x)
+        q, k, v = torch.split(p, [
                                    self.hidden_dim,
                                    self.hidden_dim,
                                    self.hidden_dim,
