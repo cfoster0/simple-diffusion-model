@@ -81,7 +81,7 @@ class ResidualBlock(Module):
             Conv2d(out_channels, out_channels, (3, 3), stride=1, padding=1),
             Conv2d(out_channels, out_channels, (3, 3), stride=1, padding=1),
         ])
-        self.norm = GroupNorm(32, out_channels)
+        self.norm = GroupNorm(1, out_channels)
         
     def forward(self, x, condition):
         for i, layer in enumerate(self.layers):
