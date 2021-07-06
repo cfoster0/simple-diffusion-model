@@ -81,7 +81,7 @@ class ResidualBlock(Module):
             Conv2d(out_channels, out_channels, (3, 3), stride=1, padding=1),
             Conv2d(out_channels, out_channels, (3, 3), stride=1, padding=1),
         ])
-        self.norm = GroupNorm(1, out_channels)
+        self.norm = GroupNorm(32, out_channels)
         
     def forward(self, x, condition):
         for i, layer in enumerate(self.layers):
@@ -126,7 +126,7 @@ class UNet(Module):
     def forward(self, x, condition):
         encoded = self.encoder(x, condition=condition)
         bottlenecked = self.bottleneck(encoded, condition=condition)
-        return self.decoder(torch.cat([encoded, bottlenecked], dim=-1), condition=condition)
+        return self.decoder(torch.cat([encoded, bottlenecked], dim=1), condition=condition)
         
 class Model(Module):
     def __init__(self):
