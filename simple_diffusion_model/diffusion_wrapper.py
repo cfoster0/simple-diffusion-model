@@ -22,11 +22,11 @@ class DiffusionWrapper(Module):
     def generate(self, n, **kwargs):
         was_training = self.net.training
         self.net.eval()
-        x = torch.randn((n,) + input_shape)
+        x = torch.randn((n,) + self.input_shape)
         for t in reversed(range(self.timesteps)):
             x = (self.alpha_schedule[t] ** -0.5) * (x - ((1.0 - self.alpha_schedule[t]) * (1.0 - self.alpha_hat_schedule[t]) ** -0.5) * self.net(x, t))
             if t > 0:
-                z = torch.randn((n,) + input_shape)
+                z = torch.randn((n,) + self.input_shape)
                 x += (self.beta_schedule[t] ** 0.5) * z
         self.net.train(was_training)
         return x
