@@ -39,7 +39,7 @@ class DiffusionWrapper(Module):
         noise = torch.randn(x.shape, device=device)
         timestep = torch.randint(0, self.timesteps, (x.shape[0],), device=device)
         alpha_bar = torch.gather(self.alpha_bar_schedule, 0, timestep)
-        noised = einsum("b , b ... -> b ...", alpha_hat ** 0.5, x) + einsum("b , b ... -> b ...", (1.0 - alpha_bar) ** 0.5, noise)
+        noised = einsum("b , b ... -> b ...", alpha_bar ** 0.5, x) + einsum("b , b ... -> b ...", (1.0 - alpha_bar) ** 0.5, noise)
         predicted_noise = self.net(noised, timestep, *args, **kwargs)
         loss = F.mse_loss(predicted_noise, noise)
         return loss
