@@ -4,7 +4,7 @@ setup(
   name = 'simple-diffusion-model',
   packages = find_packages(exclude=['examples']),
   version = '0.0.1',
-  license='GPL-3',
+  license='BSD 3-Clause',
   description = 'Simple Diffusion Model',
   author = 'Charles Foster',
   author_email = 'cfoster0@alumni.stanford.edu',
