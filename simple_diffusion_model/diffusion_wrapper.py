@@ -27,7 +27,7 @@ class DiffusionWrapper(Module):
             timestep = torch.full((n,), t).cuda()
             x = (self.alpha_schedule[t] ** -0.5) * (x - ((1.0 - self.alpha_schedule[t]) * (1.0 - self.alpha_hat_schedule[t]) ** -0.5) * self.net(x, timestep))
             if t > 0:
-                z = torch.randn((n,) + self.input_shape)
+                z = torch.randn((n,) + self.input_shape).cuda()
                 x += (self.beta_schedule[t] ** 0.5) * z
         self.net.train(was_training)
         return x
