@@ -98,7 +98,7 @@ class BottleneckBlock(Module):
     def __init__(self, channels):
         super().__init__()
         self.condition = ConditionNHWC(channels)
-        self.layers = ModuleList([SelfAttention(channels // 4, 4) for _ in range(3)])
+        self.layers = ModuleList([SelfAttention(channels // 8, 8) for _ in range(4)])
         self.norm = LayerNorm(channels)
         
     def forward(self, x, condition):
