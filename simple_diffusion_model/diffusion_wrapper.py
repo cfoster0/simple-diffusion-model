@@ -19,26 +19,28 @@ class DiffusionWrapper(Module):
         self.register_buffer('alpha_hat_schedule', torch.from_numpy(np.cumprod(1.0 - beta_schedule(timesteps))))
 
     @torch.no_grad()
-    def generate(self, n, **kwargs):
+    def generate(self, n, *args, **kwargs):
         was_training = self.net.training
         self.net.eval()
-        x = torch.randn((n,) + self.input_shape).cuda()
+        device = self.beta_schedule.device
+        x = torch.randn((n,) + self.input_shape, device=device)
         for t in reversed(range(self.timesteps)):
-            timestep = torch.full((n,), t).cuda()
-            x = (self.alpha_schedule[t] ** -0.5) * (x - ((1.0 - self.alpha_schedule[t]) * (1.0 - self.alpha_hat_schedule[t]) ** -0.5) * self.net(x, timestep))
+            timestep = torch.full((n,), t, device=device)
+            x = (self.alpha_schedule[t] ** -0.5) * (x - ((1.0 - self.alpha_schedule[t]) * (1.0 - self.alpha_hat_schedule[t]) ** -0.5) * self.net(x, timestep, *args, **kwargs))
             if t > 0:
-                z = torch.randn((n,) + self.input_shape).cuda()
+                z = torch.randn((n,) + self.input_shape, device=device)
                 x += (self.beta_schedule[t] ** 0.5) * z
         self.net.train(was_training)
         return x
 
-    def forward(self, x, **kwargs):
-        x = x.cuda()
-        noise = torch.randn(x.shape).cuda()
-        timestep = torch.randint(0, self.timesteps, (x.shape[0],)).cuda()
+    def forward(self, x, *args, **kwargs):
+        device = self.beta_schedule.device
+        x = x.to(device)
+        noise = torch.randn(x.shape, device=device)
+        timestep = torch.randint(0, self.timesteps, (x.shape[0],), device=device)
         alpha_hat = torch.gather(self.alpha_hat_schedule, 0, timestep)
         noised = einsum("b , b ... -> b ...", alpha_hat ** 0.5, x) + einsum("b , b ... -> b ...", (1.0 - alpha_hat) ** 0.5, noise)
-        predicted_noise = self.net(noised, timestep)
+        predicted_noise = self.net(noised, timestep, *args, **kwargs)
         loss = F.mse_loss(predicted_noise, noise)
         return loss
         
