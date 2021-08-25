@@ -16,6 +16,7 @@ setup(
     'einops',
     'numpy',
     'torch',
+    'torch-fidelity',
     'torchvision',
     'wandb'
   ],
