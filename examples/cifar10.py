@@ -12,6 +12,7 @@ import torch.nn.functional as F
 import torchvision.transforms as transforms
 import numpy as np
 
+import torch_fidelity
 from torchvision.datasets import CIFAR10
 from torch.utils.data import DataLoader
 
@@ -23,6 +24,9 @@ GRADIENT_ACCUMULATE_EVERY = 4
 LEARNING_RATE = 1e-4
 VALIDATE_EVERY  = 100
 GENERATE_EVERY  = 500
+EVALUATE = False
+EVALUATE_EVERY  = 100000
+EVALUATE_BATCH_SIZE = 50
 
 # helpers
 
@@ -36,6 +40,15 @@ def scale(x):
 
 def rescale(x):
     return (x + 1) / 2
+
+class FidelityWrapper(nn.Module):
+    def __init__(self, generator):
+        super().__init__()
+        self.generator = generator
+
+    def forward(self, z):
+        out = self.generator.generate(len(z))
+        return rescale(out).mul(255).round().clamp(0, 255).to(torch.uint8)
 
 def train():
     wandb.init(project="simple-diffusion-model")
@@ -85,9 +98,9 @@ def train():
             image_array = rescale(samples)
             images = wandb.Image(image_array, caption="Generated")
             wandb.log({"examples": images}, commit=False)
-        
+
         logs = {}
-        
+
         logs = {
           **logs,
           'iter': i,
@@ -95,9 +108,24 @@ def train():
           'train_loss': train_loss,
           'val_loss': val_loss,
         }
-        
+
         wandb.log(logs)
-      
+
+        if EVALUATE:
+            if (i % EVALUATE_EVERY == 0 and i != 0) or i == NUM_BATCHES - 1:
+                model.eval()
+                with torch.no_grad():
+                    wrapped_inner = FidelityWrapper(model)
+                    wrapped = torch_fidelity.GenerativeModelModuleWrapper(wrapped_inner,
+                                                                          1, 'normal', 0)
+                    metrics = torch_fidelity.calculate_metrics(input1=wrapped,
+                                                               input1_model_num_samples=10000,
+                                                               input2='cifar10-train',
+                                                               batch_size=EVALUATE_BATCH_SIZE,
+                                                               fid=True,
+                                                               verbose=True)
+                    wandb.log({"fid": metrics['frechet_inception_distance']})
+
     wandb.finish()
 
 if __name__ == '__main__':
